@@ -4,6 +4,7 @@ use crate::sealed;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use core::fmt::{self, Debug, Display};
+use dyn_clone::DynClone;
 use serde::ser::{
     SerializeMap as _, SerializeSeq as _, SerializeStruct as _, SerializeStructVariant as _,
     SerializeTuple as _, SerializeTupleStruct as _, SerializeTupleVariant as _,
@@ -53,12 +54,14 @@ use serde::ser::{
 ///
 /// This trait is sealed and can only be implemented via a `serde::Serialize`
 /// impl.
-pub trait Serialize: sealed::serialize::Sealed {
+pub trait Serialize: sealed::serialize::Sealed + DynClone {
     fn erased_serialize(&self, serializer: &mut dyn Serializer) -> Result<(), Error>;
 
     #[doc(hidden)]
     fn do_erased_serialize(&self, serializer: &mut dyn Serializer) -> Result<(), ErrorImpl>;
 }
+
+dyn_clone::clone_trait_object!(Serialize);
 
 /// An object-safe equivalent of Serde's `Serializer` trait.
 ///
@@ -223,7 +226,7 @@ impl dyn Serializer {
 
 impl<T> Serialize for T
 where
-    T: ?Sized + serde::Serialize,
+    T: ?Sized + serde::Serialize + Clone,
 {
     fn erased_serialize(&self, serializer: &mut dyn Serializer) -> Result<(), Error> {
         match self.do_erased_serialize(serializer) {
